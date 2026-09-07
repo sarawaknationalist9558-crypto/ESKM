@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Kitter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; }
+  :root {
+    --bg: #060607;
+    --bg-raised: #0f0f11;
+    --bg-hover: #17171a;
+    --border: #262629;
+    --text: #e8e8ea;
+    --text-dim: #7c7c85;
+    --accent: #ff8a3d;
+    --accent2: #ffb84d;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', system-ui, sans-serif;
+    padding-bottom: 76px;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 14px; }
+  .up { color: #00d17a; }
+  .down { color: #ff4d5e; }
+  .muted { color: var(--text-dim); }
+
+  /* header */
+  .khead { position: sticky; top: 0; z-index: 40; background: rgba(6,6,7,0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  .khead-row { max-width: 620px; margin: 0 auto; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .klogo { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 19px; display: flex; align-items: center; gap: 7px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .day-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--text-dim); background: var(--bg-raised); border: 1px solid var(--border); padding: 4px 9px; border-radius: 20px; }
+
+  .ticker-wrap { overflow: hidden; background: var(--bg-raised); border-bottom: 1px solid var(--border); padding: 6px 0; }
+  .ticker-track { display: flex; white-space: nowrap; animation: scroll-left 26s linear infinite; }
+  .ticker-item { padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+  @keyframes scroll-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* tabs */
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* auth */
+  #authScreen { padding-top: 14vh; }
+  .auth-hero { text-align: center; margin-bottom: 26px; }
+  .auth-hero .klogo { font-size: 34px; justify-content: center; margin-bottom: 6px; }
+  .auth-hero .tag { color: var(--text-dim); font-size: 12.5px; }
+  .kcard { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 14px; }
+  .auth-tabs { display: flex; gap: 6px; margin-bottom: 16px; background: var(--bg); border-radius: 12px; padding: 4px; border: 1px solid var(--border); }
+  .auth-tab { flex: 1; padding: 9px; border-radius: 9px; border: none; background: transparent; color: var(--text-dim); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12.5px; cursor: pointer; }
+  .auth-tab.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1a0e00; }
+  input, select, textarea {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 13px; font-family: 'Nunito', sans-serif; font-size: 13px; width: 100%; min-width: 0;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .btn {
+    cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1a0e00;
+    border: none; border-radius: 999px; padding: 12px 18px; font-family: 'Nunito', sans-serif;
+    font-weight: 800; font-size: 13.5px; width: 100%;
+  }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn.red { background: linear-gradient(135deg, #ff4d5e, #d81b3d); color: #fff; }
+  .btn.small { padding: 8px 14px; font-size: 12px; width: auto; }
+  .err-text { font-size: 11.5px; color: #ff8090; margin-top: 8px; min-height: 14px; }
+
+  /* profile / me */
+  .me-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .me-left { display: flex; align-items: center; gap: 11px; }
+  .avatar-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--bg-raised); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .me-name { font-weight: 800; font-size: 14px; }
+  .coin-badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: var(--bg-raised); border: 1px solid var(--border); }
+
+  /* compose */
+  .compose-wrap { padding: 14px 0; border-bottom: 8px solid var(--border); }
+  .compose-row { display: flex; gap: 11px; }
+  #kitText { background: transparent; border: none; padding: 8px 0; font-size: 15px; min-height: 60px; resize: none; }
+  #kitText:focus { outline: none; }
+  .compose-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; padding-left: 55px; }
+  #kitCoin { width: auto; flex: 1; min-width: 130px; font-size: 11.5px; padding: 8px 10px; border-radius: 20px; }
+  .sent-toggle { display: flex; gap: 6px; }
+  .sent-toggle button { padding: 7px 11px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-raised); color: var(--text-dim); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11.5px; cursor: pointer; }
+  .sent-toggle button.active.bull { background: rgba(0,209,122,0.15); border-color: #00d17a; color: #00d17a; }
+  .sent-toggle button.active.bear { background: rgba(255,77,94,0.15); border-color: #ff4d5e; color: #ff4d5e; }
+  .sent-toggle button.active.neutral { background: rgba(255,138,61,0.15); border-color: var(--accent); color: var(--accent); }
+  .compose-hint { font-size: 10.5px; color: var(--text-dim); padding-left: 55px; margin-top: 8px; }
+  .compose-submit { display: flex; justify-content: flex-end; padding-left: 55px; margin-top: 10px; }
+  .compose-submit .btn { width: auto; padding: 9px 22px; }
+
+  /* feed */
+  .kit { display: flex; gap: 11px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .kit:active { background: var(--bg-hover); }
+  .kit-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-raised); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .kit-body { flex: 1; min-width: 0; }
+  .kit-head { font-size: 12.5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+  .kit-name { font-weight: 800; }
+  .kit-handle { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .coin-tag { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: var(--bg-raised); border: 1px solid var(--border); white-space: nowrap; }
+  .kit-text { font-size: 14px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
+  .kit-actions { margin-top: 9px; display: flex; align-items: center; gap: 18px; }
+  .like-btn { background: none; border: none; color: var(--text-dim); font-family: 'Nunito', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 4px 6px; display: flex; align-items: center; gap: 5px; }
+  .like-btn.liked { color: #ff4d5e; }
+  .rug-badge { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #ff4d5e; padding: 2px 8px; border-radius: 20px; background: rgba(255,77,94,0.12); border: 1px solid rgba(255,77,94,0.4); }
+  .empty-note { font-size: 12px; color: var(--text-dim); padding: 24px 4px; text-align: center; }
+
+  /* trending */
+  .trend-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .trend-rank { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--text-dim); font-size: 13px; width: 18px; }
+  .trend-info { flex: 1; }
+  .trend-coin { font-weight: 800; font-size: 13.5px; }
+  .trend-sub { font-size: 10.5px; color: var(--text-dim); }
+  .trend-dir { font-weight: 800; font-size: 12px; }
+
+  /* rug */
+  .rug-zone { background: linear-gradient(155deg, rgba(255,77,94,0.1), transparent); border: 1px solid rgba(255,77,94,0.35); border-radius: 16px; padding: 16px; margin-top: 14px; }
+  .rug-title { font-weight: 900; font-size: 13px; color: #ff4d5e; margin-bottom: 4px; }
+
+  .section-title { font-size: 11px; font-weight: 800; color: var(--text-dim); letter-spacing: 0.5px; text-transform: uppercase; padding: 16px 0 4px; }
+
+  .toast { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); background: var(--bg-raised); border: 1px solid var(--accent); color: var(--text); padding: 10px 18px; border-radius: 20px; font-size: 12px; z-index: 999; display: none; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
+
+  /* bottom nav */
+  .knav { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(8,8,9,0.92); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; z-index: 60; max-width: 620px; margin: 0 auto; }
+  .knav-item { flex: 1; text-align: center; padding: 11px 0 calc(11px + env(safe-area-inset-bottom)); background: none; border: none; color: var(--text-dim); font-family: 'Nunito', sans-serif; cursor: pointer; }
+  .knav-item.active { color: var(--accent); }
+  .knav-icon { font-size: 19px; display: block; }
+  .knav-label { font-size: 8.5px; font-weight: 800; margin-top: 2px; display: block; letter-spacing: 0.3px; }
+</style>
+</head>
+<body>
+
+<div id="authScreen" class="wrap">
+  <div class="auth-hero">
+    <div class="klogo">🐾 kitter</div>
+    <div class="tag">where memecoins get made (and rugged)</div>
+  </div>
+
+  <div class="kcard">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLoginBtn">log in</button>
+      <button class="auth-tab" id="tabSignupBtn">sign up</button>
+    </div>
+
+    <input id="authUser" placeholder="username" style="margin-bottom:10px;" />
+    <input id="authPass" type="password" placeholder="password" style="margin-bottom:10px;" />
+    <div id="signupCoinWrap" style="display:none;margin-bottom:10px;">
+      <div style="font-size:10.5px;color:var(--text-dim);margin-bottom:5px;">which coin do you hold?</div>
+      <select id="signupCoin"><option value="">choose a coin...</option></select>
+    </div>
+    <button class="btn" id="authSubmitBtn">log in</button>
+    <div class="err-text" id="authError"></div>
+  </div>
+</div>
+
+<div id="feedScreen" style="display:none;">
+  <div class="khead">
+    <div class="khead-row">
+      <div class="klogo">🐾 kitter</div>
+      <span class="day-badge mono" id="dayBadge">DAY 1</span>
+    </div>
+    <div class="ticker-wrap"><div class="ticker-track" id="tickerTrack"></div></div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="tab-pane active" id="tab-home">
+      <div class="compose-wrap">
+        <div class="compose-row">
+          <div class="avatar-circle" id="composeAvatar"></div>
+          <textarea id="kitText" placeholder="what's happening in the market..."></textarea>
+        </div>
+        <div class="compose-meta">
+          <select id="kitCoin"></select>
+          <div class="sent-toggle">
+            <button class="bull" data-sent="bull">🐂 bull</button>
+            <button class="bear" data-sent="bear">🐻 bear</button>
+            <button class="neutral active" data-sent="neutral">😐 vibing</button>
+          </div>
+        </div>
+        <div class="compose-hint">bullish/bearish kits nudge that coin's price — likes push it further</div>
+        <div class="compose-submit"><button class="btn" id="postKitBtn">kit it</button></div>
+      </div>
+
+      <div id="feed"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-trending">
+      <div class="section-title">🔥 trending right now</div>
+      <div id="trending"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-profile">
+      <div class="me-row">
+        <div class="me-left">
+          <div class="avatar-circle" id="meAvatar"></div>
+          <div>
+            <div class="me-name" id="meName"></div>
+            <span class="coin-badge" id="meCoinBadge"></span>
+          </div>
+        </div>
+        <button class="btn ghost small" id="logoutBtn">log out</button>
+      </div>
+
+      <div class="rug-zone" id="rugCard" style="display:none;">
+        <div class="rug-title">🚨 dev zone — <span id="rugCoinName"></span></div>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-bottom:12px;">You hold this coin. You — and only you — can rug it. It's permanent, it's public, and everyone will see it happen.</div>
+        <button class="btn red" id="rugBtn">🚨 rug pull my coin</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="knav" id="feedScreenNav" style="display:none;">
+  <button class="knav-item active" data-tab="home"><span class="knav-icon">🏠</span><span class="knav-label">HOME</span></button>
+  <button class="knav-item" data-tab="trending"><span class="knav-icon">🔥</span><span class="knav-label">TRENDING</span></button>
+  <button class="knav-item" data-tab="profile"><span class="knav-icon">🐱</span><span class="knav-label">PROFILE</span></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWEpdrAtqzbaTPOXmtIilkebDAHDk8oOE",
+  authDomain: "eskm-99a6f.firebaseapp.com",
+  databaseURL: "https://eskm-99a6f-default-rtdb.firebaseio.com",
+  projectId: "eskm-99a6f",
+  storageBucket: "eskm-99a6f.firebasestorage.app",
+  messagingSenderId: "142104615575",
+  appId: "1:142104615575:web:2c2d487ecfb96e809167d2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<script>
+const ICONS = ["🐱","🐸","🐶","🦊","🐻","🐼","🦁","🐯","🐹","🐰","🦄","🐵","🐔","🦉","🐺","🐨"];
+const POST_NUDGE = 0.4;   // % price move from posting bullish/bearish
+const LIKE_NUDGE = 0.3;   // % price move per like, reversible on unlike
+
+function fmt(n, d = 2) { return Number(n).toFixed(d); }
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function avatarFor(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return ICONS[h % ICONS.length];
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(() => { t.style.display = 'none'; }, 2400);
+}
+
+let marketState = { coins: [], day: 1 };
+let posts = [];
+let currentUser = null;       // lowercase username, the DB key
+let currentUserDisplay = null;
+let myProfile = null;         // { username, coinKey, avatar, joinedDay }
+let selectedSentiment = 'neutral';
+let authMode = 'login';
+
+// ---------- market sync ----------
+db.ref('market').on('value', (snap) => {
+  marketState = snap.val() || { coins: [], day: 1 };
+  marketState.coins = Array.isArray(marketState.coins) ? marketState.coins : [];
+  renderTicker();
+  renderCoinSelects();
+  renderMeCard();
+  renderTrending();
+});
+
+function renderTicker() {
+  const track = document.getElementById('tickerTrack');
+  const dayBadge = document.getElementById('dayBadge');
+  if (dayBadge) dayBadge.textContent = 'DAY ' + (marketState.day || 1);
+  if (!marketState.coins.length) { track.innerHTML = ''; return; }
+  const items = marketState.coins.map(c => {
+    return `<span class="ticker-item">${c.rugged ? '💀' : c.icon} ${c.name} <span>${fmt(c.price)}.I</span></span>`;
+  }).join('');
+  track.innerHTML = items + items;
+}
+
+function renderCoinSelects() {
+  const signupSel = document.getElementById('signupCoin');
+  const kitSel = document.getElementById('kitCoin');
+  const opts = marketState.coins.map(c => `<option value="${c.key}">${c.rugged ? '💀' : c.icon} ${c.name}${c.rugged ? ' (rugged)' : ''}</option>`).join('');
+  const sv = signupSel.value, kv = kitSel.value;
+  signupSel.innerHTML = '<option value="">choose a coin...</option>' + opts;
+  kitSel.innerHTML = opts;
+  if (sv) signupSel.value = sv;
+  if (kv) kitSel.value = kv; else if (myProfile) kitSel.value = myProfile.coinKey;
+}
+
+function nudgeCoinPrice(coinKey, deltaPct) {
+  return db.ref('market/coins').transaction(coins => {
+    if (!coins) return coins;
+    const idx = coins.findIndex(c => c && c.key === coinKey);
+    if (idx === -1) return coins;
+    const c = coins[idx];
+    if (c.rugged) return coins; // dead coins don't move from hype anymore
+    c.price = Math.max(0.01, c.price * (1 + deltaPct / 100));
+    c.dayHigh = Math.max(c.dayHigh || c.price, c.price);
+    c.dayLow = Math.min(c.dayLow || c.price, c.price);
+    c.ath = Math.max(c.ath || c.price, c.price);
+    c.atl = Math.min(c.atl || c.price, c.price);
+    coins[idx] = c;
+    return coins;
+  });
+}
+
+// ---------- auth ----------
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('tabLoginBtn').classList.toggle('active', mode === 'login');
+  document.getElementById('tabSignupBtn').classList.toggle('active', mode === 'signup');
+  document.getElementById('signupCoinWrap').style.display = mode === 'signup' ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = mode === 'signup' ? 'sign up' : 'log in';
+  document.getElementById('authError').textContent = '';
+}
+
+async function handleAuthSubmit() {
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+  const uname = document.getElementById('authUser').value.trim();
+  const pass = document.getElementById('authPass').value;
+  if (!uname || !pass) { errEl.textContent = 'fill in a username and password.'; return; }
+  const unameLower = uname.toLowerCase();
+
+  if (authMode === 'signup') {
+    const coinKey = document.getElementById('signupCoin').value;
+    if (!coinKey) { errEl.textContent = 'pick a coin you hold.'; return; }
+    const snap = await db.ref('kitter/users/' + unameLower).once('value');
+    if (snap.exists()) { errEl.textContent = 'that username is taken — log in instead.'; return; }
+    const profile = { username: uname, coinKey, avatar: avatarFor(unameLower), passHash: simpleHash(pass), joinedDay: marketState.day || 1 };
+    await db.ref('kitter/users/' + unameLower).set(profile);
+    loginAs(unameLower, profile);
+  } else {
+    const snap = await db.ref('kitter/users/' + unameLower).once('value');
+    if (!snap.exists()) { errEl.textContent = "no account with that username — try signing up."; return; }
+    const profile = snap.val();
+    if (profile.passHash !== simpleHash(pass)) { errEl.textContent = 'wrong password.'; return; }
+    loginAs(unameLower, profile);
+  }
+}
+
+function loginAs(unameLower, profile) {
+  currentUser = unameLower;
+  currentUserDisplay = profile.username;
+  myProfile = profile;
+  localStorage.setItem('kitterUser', unameLower);
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('feedScreen').style.display = 'block';
+  document.getElementById('feedScreenNav').style.display = 'flex';
+  const composeAvatar = document.getElementById('composeAvatar');
+  if (composeAvatar) composeAvatar.textContent = profile.avatar;
+  renderMeCard();
+  renderCoinSelects();
+  renderFeed();
+  renderTrending();
+}
+
+function logout() {
+  localStorage.removeItem('kitterUser');
+  currentUser = null; currentUserDisplay = null; myProfile = null;
+  document.getElementById('feedScreen').style.display = 'none';
+  document.getElementById('feedScreenNav').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'block';
+  document.getElementById('authUser').value = '';
+  document.getElementById('authPass').value = '';
+}
+
+async function restoreSession() {
+  const saved = localStorage.getItem('kitterUser');
+  if (!saved) return;
+  const snap = await db.ref('kitter/users/' + saved).once('value');
+  if (snap.exists()) loginAs(saved, snap.val());
+  else localStorage.removeItem('kitterUser');
+}
+
+function renderMeCard() {
+  if (!currentUser || !myProfile) return;
+  document.getElementById('meAvatar').textContent = myProfile.avatar;
+  document.getElementById('meName').textContent = myProfile.username;
+  const coin = marketState.coins.find(c => c.key === myProfile.coinKey);
+  const badge = document.getElementById('meCoinBadge');
+  badge.textContent = coin ? `${coin.icon} ${coin.name}` : '...';
+  badge.style.color = coin ? coin.color : '';
+
+  const rugCard = document.getElementById('rugCard');
+  if (coin && !coin.rugged) {
+    rugCard.style.display = 'block';
+    document.getElementById('rugCoinName').textContent = coin.name;
+  } else {
+    rugCard.style.display = 'none';
+  }
+}
+
+// ---------- posting ----------
+document.querySelectorAll('.sent-toggle button').forEach(btn => {
+  btn.onclick = () => {
+    selectedSentiment = btn.dataset.sent;
+    document.querySelectorAll('.sent-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+async function submitPost() {
+  const textEl = document.getElementById('kitText');
+  const text = textEl.value.trim();
+  if (!text) { showToast('write something first'); return; }
+  if (!currentUser) return;
+  const coinKey = document.getElementById('kitCoin').value;
+  const coin = marketState.coins.find(c => c.key === coinKey);
+  const post = {
+    author: currentUser, authorDisplay: currentUserDisplay, avatar: myProfile.avatar,
+    coinKey, sentiment: selectedSentiment, text, day: marketState.day || 1, ts: Date.now(), likes: {}
+  };
+  await db.ref('kitter/posts').push(post);
+  if (selectedSentiment !== 'neutral' && coin && !coin.rugged) {
+    await nudgeCoinPrice(coinKey, selectedSentiment === 'bull' ? POST_NUDGE : -POST_NUDGE);
+    showToast(`kitted — ${coin.name} nudged ${selectedSentiment === 'bull' ? 'up' : 'down'}`);
+  } else {
+    showToast('kitted');
+  }
+  textEl.value = '';
+}
+
+async function toggleLike(postId) {
+  const post = posts.find(p => p.id === postId);
+  if (!post || !currentUser) return;
+  const likedByMe = post.likes && post.likes[currentUser];
+  const likeRef = db.ref(`kitter/posts/${postId}/likes/${currentUser}`);
+  const coin = marketState.coins.find(c => c.key === post.coinKey);
+  const canMove = post.sentiment !== 'neutral' && coin && !coin.rugged;
+  if (likedByMe) {
+    await likeRef.remove();
+    if (canMove) await nudgeCoinPrice(post.coinKey, post.sentiment === 'bull' ? -LIKE_NUDGE : LIKE_NUDGE);
+  } else {
+    await likeRef.set(true);
+    if (canMove) await nudgeCoinPrice(post.coinKey, post.sentiment === 'bull' ? LIKE_NUDGE : -LIKE_NUDGE);
+  }
+}
+
+// ---------- rug pull ----------
+async function rugPull() {
+  if (!currentUser || !myProfile) return;
+  const coin = marketState.coins.find(c => c.key === myProfile.coinKey);
+  if (!coin || coin.rugged) return;
+  const sure = confirm(`Rug pull ${coin.name}? This will crash the price and can't be undone. Everyone will see it happen.`);
+  if (!sure) return;
+
+  const dropPct = 80 + Math.random() * 15; // 80–95% crash
+  let coinName = coin.name;
+  await db.ref('market/coins').transaction(coins => {
+    if (!coins) return coins;
+    const idx = coins.findIndex(c => c && c.key === myProfile.coinKey);
+    if (idx === -1) return coins;
+    const c = coins[idx];
+    if (c.rugged) return coins;
+    c.price = Math.max(0.01, c.price * (1 - dropPct / 100));
+    c.dayLow = Math.min(c.dayLow || c.price, c.price);
+    c.atl = Math.min(c.atl || c.price, c.price);
+    c.rugged = true;
+    coinName = c.name;
+    coins[idx] = c;
+    return coins;
+  });
+
+  await db.ref('kitter/posts').push({
+    author: currentUser, authorDisplay: currentUserDisplay, avatar: myProfile.avatar,
+    coinKey: myProfile.coinKey, sentiment: 'bear', isRug: true,
+    text: `💀 RUG PULLED $${coinName}. sold every last unit. gg.`,
+    day: marketState.day || 1, ts: Date.now(), likes: {}
+  });
+  showToast(`${coinName} rugged.`);
+}
+
+// ---------- feed & trending ----------
+db.ref('kitter/posts').orderByChild('ts').limitToLast(200).on('value', (snap) => {
+  const list = [];
+  snap.forEach(child => { list.push({ id: child.key, ...child.val() }); });
+  list.reverse(); // newest first
+  posts = list;
+  renderFeed();
+  renderTrending();
+});
+
+function renderFeed() {
+  const el = document.getElementById('feed');
+  if (!el) return;
+  if (!posts.length) { el.innerHTML = '<div class="empty-note">no kits yet — be the first</div>'; return; }
+  el.innerHTML = posts.map(p => {
+    const coin = marketState.coins.find(c => c.key === p.coinKey);
+    const likeCount = p.likes ? Object.keys(p.likes).length : 0;
+    const likedByMe = currentUser && p.likes && p.likes[currentUser];
+    const sentIcon = p.sentiment === 'bull' ? '🐂' : p.sentiment === 'bear' ? '🐻' : '😐';
+    return `
+      <div class="kit">
+        <div class="kit-avatar">${p.avatar || '🐱'}</div>
+        <div class="kit-body">
+          <div class="kit-head">
+            <span class="kit-name">${escapeHtml(p.authorDisplay || p.author)}</span>
+            <span class="kit-handle">@${p.author}</span>
+            ${coin ? `<span class="coin-tag" style="color:${coin.color}">${coin.rugged?'💀':coin.icon} ${coin.name}</span>` : ''}
+            <span class="sent-tag">${sentIcon}</span>
+            ${p.isRug ? '<span class="rug-badge">RUG EVENT</span>' : ''}
+          </div>
+          <div class="kit-text">${escapeHtml(p.text)}</div>
+          <div class="kit-actions">
+            <button class="like-btn ${likedByMe ? 'liked' : ''}" onclick="toggleLike('${p.id}')">${likedByMe ? '❤' : '🤍'} ${likeCount}</button>
+            <span class="muted" style="font-size:9.5px;">Day ${p.day}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTrending() {
+  const el = document.getElementById('trending');
+  if (!el) return;
+  const scores = {};
+  posts.slice(0, 60).forEach(p => {
+    if (p.sentiment === 'neutral' || !p.coinKey) return;
+    const likeCount = p.likes ? Object.keys(p.likes).length : 0;
+    const w = (1 + likeCount) * (p.sentiment === 'bull' ? 1 : -1);
+    scores[p.coinKey] = (scores[p.coinKey] || 0) + w;
+  });
+  const ranked = Object.entries(scores).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8);
+  if (!ranked.length) { el.innerHTML = '<div class="empty-note">nothing trending yet — go kit something</div>'; return; }
+  el.innerHTML = ranked.map(([key, score], i) => {
+    const coin = marketState.coins.find(c => c.key === key);
+    if (!coin) return '';
+    const up = score >= 0;
+    return `
+      <div class="trend-row">
+        <div class="trend-rank">${i + 1}</div>
+        <div class="trend-info">
+          <div class="trend-coin">${coin.rugged ? '💀' : coin.icon} ${coin.name}</div>
+          <div class="trend-sub mono">${fmt(coin.price)}.I</div>
+        </div>
+        <div class="trend-dir ${up ? 'up' : 'down'}">${up ? '🔥 hyped' : '📉 hated'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ---------- wiring ----------
+document.getElementById('tabLoginBtn').onclick = () => setAuthMode('login');
+document.getElementById('tabSignupBtn').onclick = () => setAuthMode('signup');
+document.getElementById('authSubmitBtn').onclick = handleAuthSubmit;
+document.getElementById('logoutBtn').onclick = logout;
+document.getElementById('postKitBtn').onclick = submitPost;
+document.getElementById('rugBtn').onclick = rugPull;
+
+// ---------- tabs ----------
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  document.querySelectorAll('.knav-item').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+document.querySelectorAll('.knav-item').forEach(b => { b.onclick = () => switchTab(b.dataset.tab); });
+
+restoreSession();
+
+</script>
+</body>
+</html>
