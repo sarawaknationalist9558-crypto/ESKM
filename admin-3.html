@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>ESKIMO — Memecoin Wallet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Press+Start+2P&display=swap');
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 50% -10%, #2a1f45 0%, #14101f 45%, #0c0a14 100%);
+    color: #F0EEF7;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    padding-bottom: 84px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 12px; }
+
+  .app-header { padding: 16px 12px 10px; text-align: center; }
+  .pixel-title { font-family: 'Press Start 2P', monospace; font-size: 13px; color: #C9A6FF; text-shadow: 0 0 12px rgba(160,100,255,0.6); }
+  .subtitle { font-size: 10px; color: #8d84a8; margin-top: 4px; }
+
+  .ticker-wrap { overflow: hidden; background: #1c1630; border-top: 1px solid #352a55; border-bottom: 1px solid #352a55; padding: 7px 0; margin-bottom: 12px; }
+  .ticker-track { display: flex; white-space: nowrap; animation: scroll-left 28s linear infinite; }
+  .ticker-item { padding: 0 18px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  @keyframes scroll-left { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .card {
+    background: linear-gradient(155deg, #221a38, #191428);
+    border: 1px solid #362a54;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  }
+  .card-title { font-size: 10.5px; color: #a89bc9; font-weight: 700; letter-spacing: 0.6px; margin-bottom: 10px; text-transform: uppercase; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+  .btn {
+    cursor: pointer;
+    background: linear-gradient(135deg, #9b6dff, #6f4ee0);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12.5px;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(111,78,224,0.35);
+  }
+  .btn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+  .btn.full { width: 100%; }
+  .btn.red { background: linear-gradient(135deg, #ff6e8e, #e0426b); box-shadow: 0 3px 10px rgba(224,66,107,0.35); }
+  .btn.green { background: linear-gradient(135deg, #4ee0a0, #2bb37c); box-shadow: 0 3px 10px rgba(43,179,124,0.35); }
+  .btn.ghost { background: #241c3c; color: #cfc6e8; border: 1px solid #3a2f5c; box-shadow: none; }
+  .btn.small { padding: 6px 10px; font-size: 10.5px; border-radius: 8px; }
+
+  select, input {
+    background: #150f24;
+    color: #F0EEF7;
+    border: 1px solid #362a54;
+    border-radius: 9px;
+    padding: 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    width: 100%;
+    min-width: 0;
+  }
+  select:focus, input:focus { outline: none; border-color: #9b6dff; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+  .up { color: #4ee0a0; }
+  .down { color: #ff6e8e; }
+  .muted { color: #8d84a8; }
+
+  .status-pill { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.on { background: #4ee0a0; box-shadow: 0 0 8px #4ee0a0; }
+  .status-dot.off { background: #ff6e8e; box-shadow: 0 0 8px #ff6e8e; }
+
+  .coin-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+  .coin-row:active { background: #241c3c; }
+  .coin-row.flash-up { animation: flash-green 1.1s ease; }
+  .coin-row.flash-down { animation: flash-red 1.1s ease; }
+  @keyframes flash-green { 0% { background: rgba(78,224,160,0.28); } 100% { background: transparent; } }
+  @keyframes flash-red { 0% { background: rgba(255,110,142,0.28); } 100% { background: transparent; } }
+  .coin-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .coin-info { flex: 1; min-width: 0; }
+  .coin-name { font-size: 12.5px; font-weight: 700; }
+  .coin-mcap { font-size: 9.5px; color: #8d84a8; margin-top: 1px; }
+  .coin-spark { width: 52px; height: 24px; flex-shrink: 0; }
+  .coin-price-col { text-align: right; min-width: 62px; }
+  .coin-price { font-size: 12px; font-weight: 700; }
+  .coin-chg { font-size: 10.5px; font-weight: 700; }
+
+  .coin-detail { margin: 4px 0 10px; padding: 10px; background: #150f24; border-radius: 10px; border: 1px solid #2c2246; }
+  .stat-mini-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
+  .stat-mini { background: #1c1630; border-radius: 8px; padding: 6px 4px; text-align: center; }
+  .stat-mini-label { font-size: 8px; color: #8d84a8; }
+  .stat-mini-val { font-size: 10.5px; font-weight: 700; margin-top: 2px; }
+
+  .scroll-x { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+  .scroll-x::-webkit-scrollbar { height: 5px; }
+  .scroll-x::-webkit-scrollbar-thumb { background: #3a2f5c; border-radius: 3px; }
+  .chart-box { position: relative; height: 190px; }
+  .tab-pill { font-size: 9.5px; padding: 3px 8px; background: #1c1630; color: #8d84a8; border: 1px solid #2c2246; border-radius: 6px; font-family: inherit; font-weight: 700; cursor: pointer; }
+  .tab-pill.active { background: #9b6dff; color: #fff; border-color: #9b6dff; }
+  .candle-tooltip { position: absolute; background: #0c0a14; border: 1px solid #9b6dff; border-radius: 6px; padding: 5px 7px; font-size: 9.5px; pointer-events: none; display: none; z-index: 10; white-space: nowrap; }
+
+  .balance-hero { text-align: center; padding: 18px 0 8px; }
+  .balance-num { font-size: 30px; font-weight: 800; }
+  .balance-label { font-size: 10px; color: #8d84a8; margin-top: 2px; }
+  .alloc-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0 14px; background: #150f24; }
+  .alloc-seg { height: 100%; }
+  .holding-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 2px; border-bottom: 1px solid #241c3c; }
+  .holding-row:last-child { border-bottom: none; }
+  .trader-chip { padding: 7px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; background: #1c1630; color: #a89bc9; border: 1px solid #2c2246; white-space: nowrap; }
+  .trader-chip.active { background: linear-gradient(135deg,#9b6dff,#6f4ee0); color: #fff; border-color: transparent; }
+  .trader-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+
+  .leader-row { display: flex; justify-content: space-between; align-items: center; background: #150f24; border-radius: 10px; padding: 9px 12px; margin-bottom: 7px; }
+
+  .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; z-index: 100; }
+  .sheet-overlay.open { display: block; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: #191428; border-top: 1px solid #3a2f5c; border-radius: 20px 20px 0 0; padding: 16px 16px 26px; max-width: 720px; margin: 0 auto; transform: translateY(100%); transition: transform 0.25s ease; z-index: 101; max-height: 82vh; overflow-y: auto; }
+  .sheet.open { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: #3a2f5c; border-radius: 3px; margin: 0 auto 14px; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .sheet-title { font-size: 14px; font-weight: 800; }
+  .sheet-close { background: #241c3c; border: none; color: #cfc6e8; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; cursor: pointer; }
+  .trade-toggle { display: flex; background: #150f24; border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+  .trade-toggle button { flex: 1; padding: 9px; border-radius: 8px; border: none; background: transparent; color: #8d84a8; font-family: inherit; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .trade-toggle button.active { background: #9b6dff; color: #fff; }
+  .quick-amounts { display: flex; gap: 6px; margin: 8px 0 12px; flex-wrap: wrap; }
+  .quick-amt-btn { flex: 1; min-width: 54px; padding: 7px; background: #150f24; border: 1px solid #2c2246; border-radius: 8px; color: #cfc6e8; font-family: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+  .quick-amt-btn:active { background: #241c3c; }
+
+  .fab { position: fixed; right: 18px; bottom: 78px; width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg,#9b6dff,#6f4ee0); color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(111,78,224,0.5); border: none; cursor: pointer; z-index: 50; }
+
+  .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; background: #150f24ee; backdrop-filter: blur(10px); border-top: 1px solid #2c2246; display: flex; z-index: 60; max-width: 720px; margin: 0 auto; }
+  .nav-item { flex: 1; text-align: center; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: none; border: none; color: #6e6690; font-family: inherit; cursor: pointer; }
+  .nav-item.active { color: #C9A6FF; }
+  .nav-icon { font-size: 18px; display: block; }
+  .nav-label { font-size: 8.5px; font-weight: 700; margin-top: 2px; display: block; letter-spacing: 0.3px; }
+
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+
+  table.ledger { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  table.ledger th { text-align: left; color: #8d84a8; padding: 5px 6px; border-bottom: 1px solid #2c2246; position: sticky; top: 0; background: #191428; }
+  table.ledger td { padding: 5px 6px; border-bottom: 1px solid #201936; white-space: nowrap; }
+  .ledger-wrap { max-height: 260px; overflow-y: auto; overflow-x: auto; }
+
+  .coin-manage-row { display: flex; justify-content: space-between; align-items: center; background: #150f24; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px; }
+  .toast { position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%); background: #241c3c; border: 1px solid #9b6dff; color: #F0EEF7; padding: 9px 16px; border-radius: 20px; font-size: 11px; z-index: 999; display: none; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+  .empty-note { font-size: 11px; color: #6e6690; padding: 10px 2px; }
+
+  /* asset detail page (phantom-style) */
+  .asset-overlay { position: fixed; inset: 0; background: radial-gradient(circle at 50% -10%, #2a1f45 0%, #14101f 45%, #0c0a14 100%); z-index: 200; display: none; overflow-y: auto; }
+  .asset-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; position: sticky; top: 0; background: rgba(12,10,20,0.85); backdrop-filter: blur(10px); z-index: 2; }
+  .asset-icon-btn { width: 36px; height: 36px; border-radius: 50%; background: #1c1630; border: 1px solid #2c2246; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: #F0EEF7; }
+  .asset-icon-btn.fav.active { color: #ff6e8e; }
+  .asset-body { padding: 4px 18px 30px; max-width: 720px; margin: 0 auto; }
+  .asset-icon-ring { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; border: 2px solid; }
+  .asset-name-row { display: flex; align-items: baseline; gap: 8px; }
+  .asset-name { font-size: 24px; font-weight: 800; }
+  .asset-ticker { font-size: 13px; color: #8d84a8; font-weight: 700; }
+  .asset-price { font-size: 34px; font-weight: 800; margin-top: 6px; }
+  .asset-delta { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .tf-pills { display: flex; gap: 6px; margin: 18px 0 4px; overflow-x: auto; }
+  .tf-pill { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #1c1630; color: #8d84a8; border: 1px solid #2c2246; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .tf-pill.active { background: #9b6dff; color: #fff; border-color: #9b6dff; }
+  .asset-mcap-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; font-size: 12px; color: #8d84a8; }
+  .asset-actions { margin: 18px 0; }
+  .chat-header { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 10px; }
+  .chat-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ee0a0; display: inline-block; margin-right: 5px; box-shadow: 0 0 6px #4ee0a0; }
+  .chat-messages { max-height: 320px; overflow-y: auto; margin-bottom: 10px; }
+  .chat-msg { display: flex; gap: 9px; padding: 6px 0; }
+  .chat-msg-avatar { width: 26px; height: 26px; border-radius: 50%; background: #1c1630; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .chat-msg-body { flex: 1; background: #150f24; border-radius: 10px; padding: 7px 10px; font-size: 11.5px; word-wrap: break-word; }
+  .chat-msg-name { font-weight: 700; font-size: 10.5px; color: #c9a6ff; margin-bottom: 2px; }
+  .chat-input-row { display: flex; gap: 8px; position: sticky; bottom: 0; padding-top: 8px; background: inherit; }
+  .chat-input-row input { flex: 1; }
+  .chat-send-btn { width: auto; padding: 10px 16px; }
+</style>
+</head>
+<body>
+
+<div id="pinGate" class="wrap" style="padding-top:22vh;text-align:center;">
+  <div class="pixel-title" style="font-size:15px;margin-bottom:6px;">⛏ ESKIMO</div>
+  <div class="subtitle" style="margin-bottom:24px;">OWNER DASHBOARD</div>
+  <div class="card" style="text-align:left;">
+    <div class="card-title" style="text-align:center;">ENTER PIN</div>
+    <input id="pinInput" type="password" inputmode="numeric" placeholder="pin" style="margin-bottom:10px;" />
+    <button class="btn full" id="pinSubmitBtn">unlock</button>
+  </div>
+</div>
+
+<div id="ownerApp" style="display:none;">
+<div class="wrap">
+  <div class="app-header">
+    <div class="pixel-title">⛏ ESKIMO WALLET</div>
+    <div class="subtitle" id="subtitle">Q&amp;R² MARKET — UNIT: IRON INGOT (I)</div>
+  </div>
+</div>
+
+<div class="ticker-wrap"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<div class="wrap">
+
+  <div class="tab-section active" id="tab-market">
+    <div class="card row-between">
+      <div class="status-pill"><span class="status-dot" id="statusDot"></span><span id="statusText"></span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn red small" id="toggleOnlineBtn"></button>
+        <button class="btn small" id="nextDayBtn" style="background:linear-gradient(135deg,#ffd76e,#e0a83c);color:#241c3c;">⏭ next day</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📰 POST MARKET NEWS</div>
+      <input id="newsText" placeholder="e.g. Tungtung mine collapses in the nether" style="margin-bottom:8px;" />
+      <div class="grid2">
+        <select id="newsCoin"><option value="">no coin tag</option></select>
+        <input id="newsImpact" type="number" step="1" placeholder="price impact % (optional)" />
+      </div>
+      <button class="btn full" style="background:linear-gradient(135deg,#ffd76e,#e0a83c);color:#241c3c;margin-top:8px;" id="postNewsBtn">post to everyone's feed</button>
+      <div id="newsRecent" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="row-between" style="margin-bottom:4px;">
+        <div class="card-title" style="margin-bottom:0;">MARKET · DAY <span id="dayNum"></span></div>
+        <input id="coinSearch" placeholder="search coin" style="width:120px;padding:6px 8px;font-size:11px;" />
+      </div>
+      <div id="coinList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">LIST A NEW COIN</div>
+      <div class="grid2">
+        <input id="newCoinName" placeholder="coin name" />
+        <input id="newCoinPrice" placeholder="start price (.I)" type="number" min="0" step="0.01" />
+      </div>
+      <button class="btn full" style="background:linear-gradient(135deg,#c084fc,#8b5cf6);" id="addCoinBtn">+ add coin</button>
+    </div>
+  </div>
+
+  <div class="tab-section" id="tab-portfolio">
+    <div class="card">
+      <div class="card-title">VIEW TRADER</div>
+      <div class="trader-chips" id="traderChips"></div>
+      <div id="portfolioBody"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏆 LEADERBOARD</div>
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+
+  <div class="tab-section" id="tab-ledger">
+    <div class="card">
+      <div class="card-title">FULL TRANSACTION LEDGER</div>
+      <div class="ledger-wrap">
+        <table class="ledger">
+          <thead><tr><th>Day</th><th>Type</th><th>Trader</th><th>Coin</th><th>Amount</th><th>Price</th><th>P/L</th></tr></thead>
+          <tbody id="ledgerBodyRows"></tbody>
+        </table>
+      </div>
+      <button class="btn ghost small" id="exportCsvBtn" style="margin-top:10px;">export CSV</button>
+    </div>
+    <div class="card">
+      <div class="card-title">ACTIVITY FEED</div>
+      <div id="feed" style="max-height:200px;overflow-y:auto;font-size:11px;"></div>
+    </div>
+  </div>
+
+  <div class="tab-section" id="tab-settings">
+    <div class="card">
+      <div class="card-title">TRADE SETTINGS</div>
+      <div class="grid2">
+        <div>
+          <div style="font-size:10px;color:#8d84a8;margin-bottom:4px;">cash-out fee %</div>
+          <input id="spreadInput" type="number" min="0" max="50" step="1" />
+        </div>
+        <div></div>
+      </div>
+      <div style="font-size:10px;color:#8d84a8;margin:8px 0 4px;">exchange rates (iron value of each)</div>
+      <div class="grid2">
+        <input id="rateNetherite" type="number" min="1" placeholder="netherite" />
+        <input id="rateDiamond" type="number" min="1" placeholder="diamond" />
+      </div>
+      <button class="btn green full" id="saveSettingsBtn">save settings</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">MANAGE COINS</div>
+      <div id="coinManage"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">SHARE WITH FRIENDS</div>
+      <div style="font-size:11px;color:#8d84a8;">Send friends the viewer page link (index.html on your hosted site) — it shows live prices, leaderboard, and portfolios, no PIN needed. Keep this admin.html link to yourself.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">BACKUP</div>
+      <button class="btn ghost full" id="exportBtn" style="margin-bottom:8px;">export backup (.json)</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;" />
+      <button class="btn ghost full" id="importBtn">import backup</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:#ff6e8e;">DANGER ZONE</div>
+      <button class="btn red full" id="resetBtn">⚠ reset entire market</button>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab" id="fabTrade">⇄</button>
+
+<div class="bottom-nav">
+  <button class="nav-item active" data-tab="market"><span class="nav-icon">🏠</span><span class="nav-label">MARKET</span></button>
+  <button class="nav-item" data-tab="portfolio"><span class="nav-icon">💼</span><span class="nav-label">PORTFOLIO</span></button>
+  <button class="nav-item" data-tab="ledger"><span class="nav-icon">📜</span><span class="nav-label">LEDGER</span></button>
+  <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span class="nav-label">SETTINGS</span></button>
+</div>
+
+<div class="sheet-overlay" id="sheetOverlay"></div>
+<div class="sheet" id="tradeSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="sheetTitle">Trade</div>
+    <button class="sheet-close" id="sheetClose">✕</button>
+  </div>
+  <div class="trade-toggle">
+    <button class="active" id="modeBuyBtn">BUY</button>
+    <button id="modeSellBtn">SELL</button>
+  </div>
+
+  <div id="buyModeBody">
+    <div class="grid2">
+      <select id="sheetBuyTrader"><option value="">trader...</option></select>
+      <input id="sheetBuyNewTrader" placeholder="or new name" />
+    </div>
+    <div class="grid2">
+      <select id="sheetBuyCoin"><option value="">coin...</option></select>
+      <input id="sheetBuyAmount" placeholder="iron amount" type="number" min="0" />
+    </div>
+    <div class="quick-amounts" id="buyQuickAmounts"></div>
+    <div id="minInvestNote" style="font-size:10px;color:#8d84a8;margin-bottom:10px;">&nbsp;</div>
+    <button class="btn green full" id="sheetBuyBtn">confirm buy</button>
+  </div>
+
+  <div id="sellModeBody" style="display:none;">
+    <div class="grid2">
+      <select id="sheetSellTrader"><option value="">trader...</option></select>
+      <select id="sheetSellCoin"><option value="">position...</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <button class="btn red full" id="sheetSellOneBtn">sell this position</button>
+    </div>
+    <button class="btn ghost full" id="sheetSellAllBtn">sell everything (this trader)</button>
+    <div id="payoutBox" style="display:none;"></div>
+  </div>
+</div>
+
+</div><!-- /ownerApp -->
+
+<div class="asset-overlay" id="assetOverlay">
+  <div class="asset-top">
+    <button class="asset-icon-btn" id="assetBackBtn">←</button>
+    <div style="display:flex;gap:8px;">
+      <button class="asset-icon-btn fav" id="assetFavBtn">🤍</button>
+    </div>
+  </div>
+  <div class="asset-body">
+    <div class="asset-icon-ring" id="assetIconRing"></div>
+    <div class="asset-name-row">
+      <div class="asset-name" id="assetName"></div>
+      <div class="asset-ticker" id="assetTicker"></div>
+    </div>
+    <div class="asset-price" id="assetPrice"></div>
+    <div class="asset-delta" id="assetDelta"></div>
+
+    <div class="tf-pills" id="tfPills">
+      <button class="tf-pill active" data-tf="live">LIVE</button>
+      <button class="tf-pill" data-tf="1w">1W</button>
+      <button class="tf-pill" data-tf="1m">1M</button>
+      <button class="tf-pill" data-tf="all">ALL</button>
+      <button class="tf-pill" id="assetViewToggle" style="margin-left:auto;">📊 candles</button>
+    </div>
+    <div class="scroll-x" id="assetChartScroll"><div class="chart-box" id="assetChartBox" style="height:220px;"><canvas id="assetChartCanvas"></canvas></div></div>
+
+    <div class="asset-mcap-row">
+      <span id="assetMcap"></span>
+      <span id="assetStatBadge"></span>
+    </div>
+
+    <div class="asset-actions">
+      <button class="btn green full" id="assetBuyBtn">Buy</button>
+    </div>
+
+    <div class="chat-header">
+      <span style="font-weight:800;font-size:13px;"><span class="chat-live-dot"></span>Live Chat</span>
+      <span class="muted" id="chatPresence" style="font-size:11px;">0 here</span>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-row">
+      <input id="chatInput" placeholder="say something..." />
+      <button class="btn chat-send-btn" id="chatSendBtn">send</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+// ====== PASTE YOUR FIREBASE CONFIG HERE (from Firebase console → Project settings → your web app) ======
+const firebaseConfig = {
+  apiKey: "AIzaSyAWEpdrAtqzbaTPOXmtIilkebDAHDk8oOE",
+  authDomain: "eskm-99a6f.firebaseapp.com",
+  databaseURL: "https://eskm-99a6f-default-rtdb.firebaseio.com",
+  projectId: "eskm-99a6f",
+  storageBucket: "eskm-99a6f.firebasestorage.app",
+  messagingSenderId: "142104615575",
+  appId: "1:142104615575:web:2c2d487ecfb96e809167d2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<script>
+const STORAGE_KEY = "eskimo-memecoin-market-v1";
+const OWNER_PIN = "3141"; // change this so randoms with the link can't get in
+
+function pushShared() {
+  try { db.ref('market').set(state); } catch (e) { console.error('cloud sync failed', e); }
+}
+function pullShared() {
+  return db.ref('market').once('value').then(snap => snap.exists() ? snap.val() : null).catch(() => null);
+}
+const PALETTE = ["#4ee0a0","#ffd76e","#ff8ac2","#6ec7ff","#ff9a5a","#ffd700","#c084fc","#ff7a7a","#7ad7f0","#e0e066"];
+const ICONS = ["🪙","💎","🚀","🔥","🐸","🎲","🥇","🌙","⚡","👑","🍀","🦄","🐳","🎯","💰"];
+const SLOT_WIDTH = 34;
+const LINE_SLOT_WIDTH = 26;
+
+function iconFor(key, name) {
+  const map = { Emerald: "🟢", Kuku: "🐤", Vally: "🌸", MtPrime: "⛰️", Jacq: "🎲", Tungtung: "🥇" };
+  if (map[key]) return map[key];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) % ICONS.length;
+  return ICONS[Math.abs(hash) % ICONS.length];
+}
+
+const DEFAULT_STATE = {
+  version: 3,
+  online: true,
+  day: 11,
+  sellSpread: 0.92,
+  exchangeRates: { netherite: 100, diamond: 10, iron: 1 },
+  coins: [
+    { key: "Emerald", name: "EmeraldCoin", color: "#4ee0a0", icon: "🟢", price: 0.96, supply: 2400, dayOpen: 1.784, dayHigh: 1.784, dayLow: 0.96, ath: 3.71, atl: 0.90 },
+    { key: "Kuku", name: "Kukucoin", color: "#ffd76e", icon: "🐤", price: 1.06, supply: 5200, dayOpen: 1.151, dayHigh: 1.151, dayLow: 1.06, ath: 1.37, atl: 0.90 },
+    { key: "Vally", name: "Vally's Puh", color: "#ff8ac2", icon: "🌸", price: 3.41, supply: 1800, dayOpen: 3.128, dayHigh: 3.41, dayLow: 3.128, ath: 6.47, atl: 2.132 },
+    { key: "MtPrime", name: "Mt Prime", color: "#6ec7ff", icon: "⛰️", price: 4.28, supply: 900, dayOpen: 4.0, dayHigh: 4.28, dayLow: 4.0, ath: 4.28, atl: 1.5 },
+    { key: "Jacq", name: "Jacqcoin", color: "#ff9a5a", icon: "🎲", price: 3.93, supply: 3100, dayOpen: 4.596, dayHigh: 4.596, dayLow: 3.93, ath: 4.89, atl: 2.9 },
+    { key: "Tungtung", name: "Tungtung Gold", color: "#ffd700", icon: "🥇", price: 10.33, supply: 620, dayOpen: 10.65, dayHigh: 10.65, dayLow: 10.33, ath: 10.65, atl: 4.0 },
+  ],
+  history: [
+    { day: 1, Emerald: 2.2, Kuku: 0.9, Vally: 5.5, MtPrime: 1.5, Jacq: 3.3, Tungtung: 4.0 },
+    { day: 2, Emerald: 2.41, Kuku: 1.03, Vally: 5.1, MtPrime: 1.84, Jacq: 2.9, Tungtung: 5.27 },
+    { day: 3, Emerald: 2.31, Kuku: 1.12, Vally: 5.9, MtPrime: 1.66, Jacq: 3.63, Tungtung: 4.95 },
+    { day: 4, Emerald: 2.61, Kuku: 1.06, Vally: 6.09, MtPrime: 1.99, Jacq: 3.03, Tungtung: 6.99 },
+    { day: 5, Emerald: 2.38, Kuku: 1.29, Vally: 5.4, MtPrime: 2.14, Jacq: 4.05, Tungtung: 5.72 },
+    { day: 6, Emerald: 2.51, Kuku: 1.17, Vally: 6.47, MtPrime: 2.06, Jacq: 4.38, Tungtung: 7.29 },
+    { day: 7, Emerald: 2.34, Kuku: 1.37, Vally: 6.2, MtPrime: 2.77, Jacq: 3.53, Tungtung: 8.08 },
+    { day: 8, Emerald: 3.71, Kuku: 1.20, Vally: 4.15, MtPrime: 3.64, Jacq: 4.89, Tungtung: 8.98 },
+    { day: 9, Emerald: 1.885, Kuku: 1.17, Vally: 2.132, MtPrime: 4.05, Jacq: 4.74, Tungtung: 9.43 },
+    { day: 10, Emerald: 1.784, Kuku: 1.151, Vally: 3.128, MtPrime: 4.0, Jacq: 4.596, Tungtung: 10.65 },
+    { day: 11, Emerald: 0.96, Kuku: 1.06, Vally: 3.41, MtPrime: 4.28, Jacq: 3.93, Tungtung: 10.33 },
+  ],
+  traders: [
+    { name: "Edson", positions: {}, realizedProfit: 19318, totalCashedOut: 45634 },
+    { name: "Nuzul", positions: {}, realizedProfit: 737, totalCashedOut: 5497 },
+    { name: "Quinton", positions: {
+        Kuku: { units: 16 / 1.20, cost: 16 },
+        MtPrime: { units: 16 / 3.64 + 16 / 4.05, cost: 32 },
+        Jacq: { units: 16 / 4.89, cost: 16 },
+        Tungtung: { units: 18 / 8.98 + 19 / 9.43, cost: 37 },
+      }, realizedProfit: 18.04, totalCashedOut: 1202.04 },
+  ],
+  feed: [
+    { id: 15, text: "Day 11 rolled — market moved." },
+    { id: 14, text: "Day 10 rolled — market moved." },
+    { id: 13, text: "Quinton sold Vally's Puh — payout 7.56.I (-8.44.I)" },
+    { id: 12, text: "Quinton sold EmeraldCoin — payout 7.48.I (-8.52.I)" },
+    { id: 11, text: "Quinton invested 16.00.I into Mt Prime @ 4.05.I" },
+    { id: 10, text: "Quinton invested 19.00.I into Tungtung Gold @ 9.43.I" },
+    { id: 9, text: "Day 9 rolled — market moved." },
+    { id: 8, text: "Quinton invested 18.00.I into Tungtung Gold @ 8.98.I" },
+    { id: 7, text: "Quinton invested 16.00.I into Jacqcoin @ 4.89.I" },
+    { id: 6, text: "Quinton invested 16.00.I into Mt Prime @ 3.64.I" },
+    { id: 5, text: "Quinton invested 16.00.I into Vally's Puh @ 4.15.I" },
+    { id: 4, text: "Quinton invested 16.00.I into Kukucoin @ 1.20.I" },
+    { id: 3, text: "Quinton invested 16.00.I into EmeraldCoin @ 3.71.I" },
+    { id: 2, text: "Day 8 rolled — market moved." },
+    { id: 1, text: "Server marked ONLINE — market reopened." },
+  ],
+  ledger: [
+    { day: 8, type: "buy", trader: "Quinton", coin: "EmeraldCoin", amount: 16, price: 3.71, pl: null },
+    { day: 8, type: "buy", trader: "Quinton", coin: "Kukucoin", amount: 16, price: 1.20, pl: null },
+    { day: 8, type: "buy", trader: "Quinton", coin: "Vally's Puh", amount: 16, price: 4.15, pl: null },
+    { day: 8, type: "buy", trader: "Quinton", coin: "Mt Prime", amount: 16, price: 3.64, pl: null },
+    { day: 8, type: "buy", trader: "Quinton", coin: "Jacqcoin", amount: 16, price: 4.89, pl: null },
+    { day: 8, type: "buy", trader: "Quinton", coin: "Tungtung Gold", amount: 18, price: 8.98, pl: null },
+    { day: 9, type: "buy", trader: "Quinton", coin: "Tungtung Gold", amount: 19, price: 9.43, pl: null },
+    { day: 9, type: "buy", trader: "Quinton", coin: "Mt Prime", amount: 16, price: 4.05, pl: null },
+    { day: 9, type: "sell", trader: "Quinton", coin: "EmeraldCoin", amount: 7.48, price: 1.734, pl: -8.52 },
+    { day: 9, type: "sell", trader: "Quinton", coin: "Vally's Puh", amount: 7.56, price: 1.961, pl: -8.44 },
+  ],
+  news: [],
+};
+
+function fmt(n, d = 2) { return Number(n).toFixed(d); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function fmtCompact(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(1) + "K";
+  return fmt(n, 0);
+}
+function minInvest(price) { return Math.max(3, Math.ceil(price * 2)); }
+function randomChange() {
+  const r = Math.random();
+  if (r < 0.12) return 0.3 + Math.random() * 0.35;
+  if (r < 0.24) return -(0.25 + Math.random() * 0.3);
+  return Math.random() * 0.35 - 0.15;
+}
+function nextId(list) { return (list.reduce((m,f)=>Math.max(m,f.id),0)||0)+1; }
+function pushFeed(list, text) { return [{ id: nextId(list), text }, ...list].slice(0, 60); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(() => { t.style.display = 'none'; }, 2200);
+}
+
+function migrate(s) {
+  const d = DEFAULT_STATE;
+  s.version = 3;
+  s.online = typeof s.online === 'boolean' ? s.online : true;
+  s.day = s.day || 1;
+  s.sellSpread = s.sellSpread || 0.92;
+  s.exchangeRates = s.exchangeRates || { ...d.exchangeRates };
+  s.coins = (Array.isArray(s.coins) ? s.coins : []).map(c => ({
+    key: c.key, name: c.name,
+    color: c.color || PALETTE[Math.floor(Math.random()*PALETTE.length)],
+    icon: c.icon || iconFor(c.key, c.name),
+    price: c.price,
+    supply: c.supply || Math.floor(500 + Math.random()*4500),
+    dayOpen: c.dayOpen !== undefined ? c.dayOpen : c.price,
+    dayHigh: c.dayHigh !== undefined ? c.dayHigh : c.price,
+    dayLow: c.dayLow !== undefined ? c.dayLow : c.price,
+    ath: c.ath !== undefined ? c.ath : c.price,
+    atl: c.atl !== undefined ? c.atl : c.price,
+    rugged: c.rugged || false,
+    delisted: c.delisted || false,
+    daysSinceRug: c.daysSinceRug || 0,
+  }));
+  s.history = Array.isArray(s.history) ? s.history : [];
+  s.traders = (Array.isArray(s.traders) ? s.traders : []).map(t => ({
+    name: t.name, positions: t.positions || {}, realizedProfit: t.realizedProfit || 0, totalCashedOut: t.totalCashedOut || 0
+  }));
+  s.feed = Array.isArray(s.feed) ? s.feed : [];
+  s.ledger = Array.isArray(s.ledger) ? s.ledger : [];
+  s.news = Array.isArray(s.news) ? s.news : [];
+  return s;
+}
+
+let state;
+try {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  state = raw ? migrate(JSON.parse(raw)) : structuredClone(DEFAULT_STATE);
+} catch (e) {
+  state = structuredClone(DEFAULT_STATE);
+}
+function save(msg) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.error(e); showToast("save failed — storage full?"); }
+  pushShared();
+  if (msg) showToast(msg);
+  renderAll();
+}
+
+let activeTab = "market";
+let expandedCoin = null;
+let coinView = "candles";
+let portfolioTrader = null;
+let sheetMode = "buy";
+let flashDirection = {};
+let lastPayout = null;
+let lineChartInstance = null;
+
+function advanceDay() {
+  if (!state.online) return;
+  const nextDay = state.day + 1;
+  flashDirection = {};
+  state.coins.forEach(c => {
+    if (c.rugged) {
+      if (c.delisted) return; // fully dead — frozen, doesn't move at all
+      const oldPrice = c.price;
+      const decay = 0.35 + Math.random() * 0.25; // loses 35–60% of what's left, every day
+      c.daysSinceRug = (c.daysSinceRug || 0) + 1;
+      c.dayOpen = oldPrice;
+      c.price = Math.max(0.001, oldPrice * (1 - decay));
+      c.dayHigh = oldPrice;
+      c.dayLow = c.price;
+      c.atl = Math.min(c.atl, c.price);
+      if (c.price <= 0.02 || c.daysSinceRug >= 5) { c.delisted = true; c.price = 0.001; }
+      flashDirection[c.key] = 'down';
+      return;
+    }
+    const oldPrice = c.price;
+    const change = randomChange();
+    const newPrice = Math.max(0.05, c.price * (1 + change));
+    c.dayOpen = oldPrice;
+    c.dayHigh = Math.max(oldPrice, newPrice);
+    c.dayLow = Math.min(oldPrice, newPrice);
+    c.price = newPrice;
+    c.ath = Math.max(c.ath, newPrice);
+    c.atl = Math.min(c.atl, newPrice);
+    flashDirection[c.key] = newPrice >= oldPrice ? 'up' : 'down';
+  });
+  const histEntry = { day: nextDay };
+  state.coins.forEach(c => { histEntry[c.key] = Number(c.price.toFixed(3)); });
+  state.history.push(histEntry);
+  state.day = nextDay;
+  state.feed = pushFeed(state.feed, `Day ${nextDay} rolled — market moved.`);
+  save();
+  setTimeout(() => { document.querySelectorAll('.coin-row').forEach(el => el.classList.remove('flash-up','flash-down')); }, 1200);
+}
+function toggleOnline() {
+  state.feed = pushFeed(state.feed, state.online ? "Server marked OFFLINE — market closed." : "Server marked ONLINE — market reopened.");
+  state.online = !state.online;
+  save();
+}
+function addCoin() {
+  const name = document.getElementById('newCoinName').value.trim();
+  const price = parseFloat(document.getElementById('newCoinPrice').value);
+  if (!name || !price || price <= 0) { showToast("enter a name and valid price"); return; }
+  const key = name.replace(/[^a-zA-Z0-9]/g, "") + Math.floor(Math.random() * 10000);
+  const color = PALETTE[state.coins.length % PALETTE.length];
+  const icon = iconFor(key, name);
+  const supply = Math.floor(500 + Math.random()*4500);
+  state.coins.push({ key, name, color, icon, price, supply, dayOpen: price, dayHigh: price, dayLow: price, ath: price, atl: price });
+  if (state.history.length) state.history[state.history.length - 1][key] = price;
+  state.feed = pushFeed(state.feed, `New coin listed: ${name} at ${fmt(price)}.I`);
+  document.getElementById('newCoinName').value = '';
+  document.getElementById('newCoinPrice').value = '';
+  save(`${name} listed`);
+}
+function removeCoin(key) {
+  const coin = state.coins.find(c => c.key === key);
+  if (!coin) return;
+  const heldBySomeone = state.traders.some(t => t.positions[key] && t.positions[key].units > 0);
+  if (heldBySomeone) { showToast("can't remove — someone still holds it"); return; }
+  if (!confirm(`Remove ${coin.name} from the market? This can't be undone.`)) return;
+  state.coins = state.coins.filter(c => c.key !== key);
+  state.feed = pushFeed(state.feed, `${coin.name} delisted.`);
+  save(`${coin.name} removed`);
+}
+function ensureTrader(name) {
+  if (!state.traders.find(t => t.name === name)) {
+    state.traders.push({ name, positions: {}, realizedProfit: 0, totalCashedOut: 0 });
+  }
+}
+function doBuy() {
+  if (!state.online) { showToast("server is offline"); return; }
+  const existing = document.getElementById('sheetBuyTrader').value;
+  const fresh = document.getElementById('sheetBuyNewTrader').value.trim();
+  const name = (existing || fresh).trim();
+  const coinKey = document.getElementById('sheetBuyCoin').value;
+  const amount = parseFloat(document.getElementById('sheetBuyAmount').value);
+  const coin = state.coins.find(c => c.key === coinKey);
+  if (!name) { showToast("pick or enter a trader"); return; }
+  if (!coin) { showToast("pick a coin"); return; }
+  if (!amount || amount <= 0) { showToast("enter an iron amount"); return; }
+  const min = minInvest(coin.price);
+  if (amount < min) { showToast(`minimum invest is ${min}.I`); return; }
+
+  ensureTrader(name);
+  const trader = state.traders.find(t => t.name === name);
+  const existingPos = trader.positions[coin.key] || { units: 0, cost: 0 };
+  const units = existingPos.units + amount / coin.price;
+  trader.positions[coin.key] = { units, cost: existingPos.cost + amount };
+
+  state.feed = pushFeed(state.feed, `${name} invested ${fmt(amount)}.I into ${coin.name} @ ${fmt(coin.price)}.I`);
+  state.ledger.push({ day: state.day, type: "buy", trader: name, coin: coin.name, amount: amount, price: coin.price, pl: null });
+  document.getElementById('sheetBuyAmount').value = '';
+  document.getElementById('sheetBuyNewTrader').value = '';
+  closeSheet();
+  save(`bought ${coin.name} for ${name}`);
+}
+function computePayoutBreakdown(payout) {
+  const rates = state.exchangeRates;
+  let remaining = payout;
+  const netherite = Math.floor(remaining / rates.netherite);
+  remaining -= netherite * rates.netherite;
+  const diamond = Math.floor(remaining / rates.diamond);
+  remaining -= diamond * rates.diamond;
+  const iron = Math.round(remaining / rates.iron);
+  return { netherite, diamond, iron };
+}
+function doSellPosition() {
+  const traderName = document.getElementById('sheetSellTrader').value;
+  const coinKey = document.getElementById('sheetSellCoin').value;
+  const trader = state.traders.find(t => t.name === traderName);
+  const coin = state.coins.find(c => c.key === coinKey);
+  if (!trader || !coin) { showToast("pick a trader and position"); return; }
+  const pos = trader.positions[coinKey];
+  if (!pos || pos.units <= 0) return;
+
+  const sellPrice = coin.price * state.sellSpread;
+  const payout = pos.units * sellPrice;
+  const profit = payout - pos.cost;
+  delete trader.positions[coinKey];
+  trader.realizedProfit += profit;
+  trader.totalCashedOut += payout;
+
+  const breakdown = computePayoutBreakdown(payout);
+  lastPayout = { trader: traderName, coin: coin.name, payout, profit, ...breakdown };
+  state.feed = pushFeed(state.feed, `${traderName} sold ${coin.name} — payout ${fmt(payout)}.I (${profit>=0?'+':''}${fmt(profit)}.I)`);
+  state.ledger.push({ day: state.day, type: "sell", trader: traderName, coin: coin.name, amount: payout, price: sellPrice, pl: profit });
+  save();
+  renderSheetSellBody();
+}
+function doSellAll() {
+  const traderName = document.getElementById('sheetSellTrader').value;
+  const trader = state.traders.find(t => t.name === traderName);
+  if (!trader) { showToast("pick a trader"); return; }
+  const coinKeys = Object.keys(trader.positions);
+  if (coinKeys.length === 0) { showToast(`${traderName} has no open positions`); return; }
+  if (!confirm(`Cash out ALL of ${traderName}'s positions?`)) return;
+
+  let totalPayout = 0, totalProfit = 0;
+  coinKeys.forEach(key => {
+    const coin = state.coins.find(c => c.key === key);
+    const pos = trader.positions[key];
+    if (!coin || !pos) return;
+    const sellPrice = coin.price * state.sellSpread;
+    const payout = pos.units * sellPrice;
+    totalPayout += payout;
+    totalProfit += payout - pos.cost;
+    state.ledger.push({ day: state.day, type: "sell", trader: traderName, coin: coin.name, amount: payout, price: sellPrice, pl: payout - pos.cost });
+  });
+  trader.positions = {};
+  trader.realizedProfit += totalProfit;
+  trader.totalCashedOut += totalPayout;
+
+  const breakdown = computePayoutBreakdown(totalPayout);
+  lastPayout = { trader: traderName, coin: "ALL POSITIONS", payout: totalPayout, profit: totalProfit, ...breakdown };
+  state.feed = pushFeed(state.feed, `${traderName} cashed out everything — payout ${fmt(totalPayout)}.I (${totalProfit>=0?'+':''}${fmt(totalProfit)}.I)`);
+  save();
+  renderSheetSellBody();
+}
+function saveSettings() {
+  const spreadPct = parseFloat(document.getElementById('spreadInput').value);
+  const netherite = parseFloat(document.getElementById('rateNetherite').value);
+  const diamond = parseFloat(document.getElementById('rateDiamond').value);
+  if (!isNaN(spreadPct) && spreadPct >= 0 && spreadPct <= 50) state.sellSpread = 1 - spreadPct / 100;
+  if (netherite > 0) state.exchangeRates.netherite = netherite;
+  if (diamond > 0) state.exchangeRates.diamond = diamond;
+  save("settings saved");
+}
+function resetMarket() {
+  if (!confirm("Reset the ENTIRE market? All traders, coins, and history will be wiped. This can't be undone.")) return;
+  if (!confirm("Really sure? This is your last chance to cancel.")) return;
+  state = structuredClone(DEFAULT_STATE);
+  state.day = 0;
+  state.history = [];
+  state.traders = [];
+  state.ledger = [];
+  state.feed = [{ id: 1, text: "Market reset — fresh start." }];
+  save("market reset");
+}
+function exportBackup() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `eskimo-market-day${state.day}-backup.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast("backup downloaded");
+}
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.coins || !parsed.traders) throw new Error("invalid file");
+      if (!confirm("Import this backup? It will replace your current market.")) return;
+      state = migrate(parsed);
+      save("backup imported");
+    } catch (err) { showToast("couldn't read that file"); }
+  };
+  reader.readAsText(file);
+}
+function exportCsv() {
+  const rows = [["Day","Type","Trader","Coin","Amount(.I)","Price(.I)","P/L(.I)"]];
+  [...state.ledger].reverse().forEach(l => rows.push([l.day, l.type, l.trader, l.coin, fmt(l.amount), fmt(l.price), l.pl === null ? "" : fmt(l.pl)]));
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `eskimo-ledger-day${state.day}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function getTraderRows() {
+  return state.traders.map(t => {
+    let currentValue = 0, costBasis = 0;
+    const posDetails = [];
+    Object.entries(t.positions).forEach(([key, pos]) => {
+      const coin = state.coins.find(c => c.key === key);
+      if (!coin) return;
+      const val = pos.units * coin.price;
+      currentValue += val; costBasis += pos.cost;
+      posDetails.push({ key, coinName: coin.name, icon: coin.icon, color: coin.color, units: pos.units, cost: pos.cost, value: val, pl: val - pos.cost });
+    });
+    const unrealized = currentValue - costBasis;
+    const totalProfit = unrealized + t.realizedProfit;
+    return { ...t, currentValue, costBasis, unrealized, totalProfit, hasOpen: posDetails.length > 0, posDetails };
+  });
+}
+function prevPrice(key) {
+  const h = state.history;
+  return h.length > 1 ? h[h.length-2][key] : undefined;
+}
+function pctChange(coin) {
+  const prev = prevPrice(coin.key);
+  if (prev === undefined || !prev) return 0;
+  return ((coin.price - prev) / prev) * 100;
+}
+
+function drawSparkline(canvas, key, color) {
+  const series = state.history.slice(-10).map(d => d[key]).filter(v => v !== undefined);
+  if (series.length < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 52, H = 24;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const hi = Math.max(...series), lo = Math.min(...series), range = (hi-lo)||1;
+  ctx.beginPath();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+  series.forEach((v,i) => {
+    const x = (i/(series.length-1)) * (W-2) + 1;
+    const y = H - 2 - ((v-lo)/range) * (H-4);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+}
+
+function buildOHLC(key, coinIndex) {
+  const series = state.history.map(d => d[key]).filter(v => v !== undefined);
+  return series.map((close, i) => {
+    const open = i === 0 ? close - close * 0.03 : series[i - 1];
+    const seed = coinIndex * 97 + i * 13;
+    const r1 = Math.abs(Math.sin(seed + 1)) % 1;
+    const r2 = Math.abs(Math.sin(seed + 2)) % 1;
+    const spread = Math.abs(close - open);
+    const pad = spread * 0.4 + Math.max(open, close) * 0.015;
+    const high = Math.max(open, close) + pad * (0.5 + r1);
+    const low = Math.max(0.01, Math.min(open, close) - pad * (0.5 + r2));
+    return { label: `D${i+1}`, open, close, high, low };
+  });
+}
+function drawCandles(coinKey, canvasId, scrollId, autoScrollToEnd) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const coinIndex = state.coins.findIndex(c => c.key === coinKey);
+  if (coinIndex === -1) return;
+  const data = buildOHLC(coinKey, coinIndex);
+  const scrollEl = document.getElementById(scrollId);
+  const visibleW = scrollEl.getBoundingClientRect().width;
+  const padL = 42, padR = 14, padT = 10, padB = 20;
+  const plotW = Math.max(data.length * SLOT_WIDTH, visibleW - padL - padR);
+  const W = padL + plotW + padR, H = 190;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const plotH = H-padT-padB;
+  const allHigh = Math.max(...data.map(d=>d.high));
+  const allLow = Math.min(...data.map(d=>d.low));
+  const range = allHigh-allLow || 1;
+  const yFor = v => padT + plotH - ((v-allLow)/range)*plotH;
+  ctx.strokeStyle = '#241c3c'; ctx.fillStyle = '#8d84a8'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+  for (let i=0;i<=3;i++){
+    const v = allLow + (range*i)/3; const y = yFor(v);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillText(v.toFixed(2), padL-5, y+3);
+  }
+  const bodyW = Math.min(18, SLOT_WIDTH*0.55);
+  ctx.textAlign = 'center';
+  data.forEach((d,i) => {
+    const cx = padL + SLOT_WIDTH*i + SLOT_WIDTH/2;
+    const up = d.close >= d.open;
+    const color = up ? '#4ee0a0' : '#ff6e8e';
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(cx, yFor(d.high)); ctx.lineTo(cx, yFor(d.low)); ctx.stroke();
+    const yOpen = yFor(d.open), yClose = yFor(d.close);
+    const top = Math.min(yOpen,yClose);
+    const h = Math.max(Math.abs(yClose-yOpen), 2);
+    ctx.fillRect(cx-bodyW/2, top, bodyW, h);
+    ctx.fillStyle = '#8d84a8';
+    if (data.length < 40 || i % Math.ceil(data.length/40) === 0) ctx.fillText(d.label, cx, H-6);
+  });
+  if (autoScrollToEnd) scrollEl.scrollLeft = scrollEl.scrollWidth;
+}
+function drawLineChart(coinKey, canvasId, innerId, scrollId, autoScrollToEnd) {
+  const inner = document.getElementById(innerId);
+  const scrollEl = document.getElementById(scrollId);
+  const visibleW = scrollEl.getBoundingClientRect().width;
+  const neededW = Math.max(state.history.length * LINE_SLOT_WIDTH + 30, visibleW);
+  inner.style.width = neededW + 'px';
+  const coin = state.coins.find(c => c.key === coinKey);
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if (lineChartInstance) lineChartInstance.destroy();
+  lineChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: state.history.map(d => 'D'+d.day),
+      datasets: [{
+        data: state.history.map(d => d[coinKey] !== undefined ? d[coinKey] : null),
+        borderColor: coin.color, backgroundColor: coin.color, borderWidth: 2, pointRadius: 2, tension: 0.3, spanGaps: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0c0a14', borderColor:'#3a2f5c', borderWidth:1 } },
+      scales: {
+        x: { ticks: { color: '#8d84a8', font: { size: 9 } }, grid: { color: '#241c3c' } },
+        y: { ticks: { color: '#8d84a8', font: { size: 10 } }, grid: { color: '#241c3c' } },
+      }
+    }
+  });
+  if (autoScrollToEnd) scrollEl.scrollLeft = scrollEl.scrollWidth;
+}
+
+function renderTicker() {
+  const items = state.coins.filter(c => !c.delisted).map(c => {
+    const chg = pctChange(c);
+    const up = chg >= 0;
+    return `<span class="ticker-item">${c.rugged ? '💀' : c.icon} ${c.name} <span class="${up?'up':'down'}">${up?'▲':'▼'} ${fmt(Math.abs(chg),1)}%</span></span>`;
+  }).join('');
+  document.getElementById('tickerTrack').innerHTML = items + items;
+}
+
+function unlockOwner() {
+  const pin = document.getElementById('pinInput').value;
+  if (pin !== OWNER_PIN) { alert("that's not it"); return; }
+  document.getElementById('pinGate').style.display = 'none';
+  document.getElementById('ownerApp').style.display = 'block';
+  pullShared().then(remote => { if (remote) state = migrate(remote); else pushShared(); renderAll(); });
+}
+
+function renderCoinList() {
+  const search = (document.getElementById('coinSearch').value || '').toLowerCase();
+  const listEl = document.getElementById('coinList');
+  listEl.innerHTML = '';
+  const filtered = state.coins.filter(c => c.name.toLowerCase().includes(search))
+    .sort((a, b) => {
+      if (a.rugged !== b.rugged) return a.rugged ? 1 : -1;
+      const af = isFavorite(a.key), bf = isFavorite(b.key);
+      if (af !== bf) return af ? -1 : 1;
+      return 0;
+    });
+  if (filtered.length === 0) { listEl.innerHTML = '<div class="empty-note">no coins match</div>'; return; }
+  filtered.forEach(c => {
+    const chg = pctChange(c);
+    const up = chg >= 0;
+    const mcap = c.price * c.supply;
+    const row = document.createElement('div');
+    row.className = 'coin-row';
+    if (c.rugged) row.style.opacity = c.delisted ? '0.25' : String(Math.max(0.35, 1 - (c.daysSinceRug || 0) * 0.15));
+    if (flashDirection[c.key] === 'up') row.classList.add('flash-up');
+    if (flashDirection[c.key] === 'down') row.classList.add('flash-down');
+    const badge = c.delisted ? ' <span style="color:#6e6690;font-size:9px;font-weight:800;">💀 DELISTED</span>' : c.rugged ? ' <span style="color:#ff6e8e;font-size:9px;font-weight:800;">💀 RUGGED</span>' : '';
+    const favMark = isFavorite(c.key) ? '❤️ ' : '';
+    row.innerHTML = `
+      <div class="coin-icon" style="background:${c.color}22;border:1px solid ${c.color}55;">${c.icon}</div>
+      <div class="coin-info">
+        <div class="coin-name">${favMark}${c.name}${badge}</div>
+        <div class="coin-mcap">mcap ${fmtCompact(mcap)}.I · supply ${fmtCompact(c.supply)}</div>
+      </div>
+      <canvas class="coin-spark" id="spark-${c.key}"></canvas>
+      <div class="coin-price-col">
+        <div class="coin-price">${fmt(c.price)}.I</div>
+        <div class="coin-chg ${up?'up':'down'}">${up?'+':''}${fmt(chg,1)}%</div>
+      </div>
+    `;
+    row.onclick = () => openAssetPage(c.key);
+    listEl.appendChild(row);
+    requestAnimationFrame(() => { const cv = document.getElementById(`spark-${c.key}`); if (cv) drawSparkline(cv, c.key, c.color); });
+  });
+}
+
+// ---------- favorites (per-device, local only) ----------
+function getFavorites() { try { return JSON.parse(localStorage.getItem('eskimoFavorites') || '[]'); } catch (e) { return []; } }
+function isFavorite(key) { return getFavorites().includes(key); }
+function toggleFavorite(key) {
+  let favs = getFavorites();
+  favs = favs.includes(key) ? favs.filter(k => k !== key) : [...favs, key];
+  localStorage.setItem('eskimoFavorites', JSON.stringify(favs));
+  const btn = document.getElementById('assetFavBtn');
+  btn.textContent = favs.includes(key) ? '❤️' : '🤍';
+  btn.classList.toggle('active', favs.includes(key));
+  renderCoinList();
+}
+
+// ---------- asset detail page (phantom-style) ----------
+let currentAssetCoin = null;
+let currentTimeframe = 'live';
+let assetView = 'line';
+let assetChartInstance = null;
+let chatMsgRef = null, chatPresenceRef = null, myPresenceRef = null;
+let chatGuestId = localStorage.getItem('eskimoGuestId');
+if (!chatGuestId) { chatGuestId = 'g' + Math.random().toString(36).slice(2, 10); localStorage.setItem('eskimoGuestId', chatGuestId); }
+
+function getChatNickname() {
+  let name = localStorage.getItem('eskimoChatName');
+  if (!name) {
+    name = (prompt("pick a name for chat (everyone will see it):", "Owner") || 'Owner').trim().slice(0, 20) || 'Owner';
+    localStorage.setItem('eskimoChatName', name);
+  }
+  return name;
+}
+
+function openAssetPage(key) {
+  currentAssetCoin = key;
+  currentTimeframe = 'live';
+  document.querySelectorAll('#tfPills .tf-pill[data-tf]').forEach(p => p.classList.toggle('active', p.dataset.tf === 'live'));
+  document.getElementById('assetOverlay').style.display = 'block';
+  renderAssetPage();
+  attachChat(key);
+}
+function closeAssetPage() {
+  if (currentAssetCoin) detachChat();
+  currentAssetCoin = null;
+  document.getElementById('assetOverlay').style.display = 'none';
+}
+
+function renderAssetPage() {
+  const c = state.coins.find(x => x.key === currentAssetCoin);
+  if (!c) { closeAssetPage(); return; }
+  const chg = pctChange(c);
+  const up = chg >= 0;
+  const prev = prevPrice(c.key);
+  const deltaAbs = prev !== undefined ? c.price - prev : 0;
+  document.getElementById('assetIconRing').textContent = c.icon;
+  document.getElementById('assetIconRing').style.borderColor = c.color;
+  document.getElementById('assetIconRing').style.background = c.color + '22';
+  document.getElementById('assetName').textContent = c.name;
+  document.getElementById('assetTicker').textContent = c.key.toUpperCase();
+  document.getElementById('assetPrice').textContent = fmt(c.price) + '.I';
+  document.getElementById('assetDelta').innerHTML = `<span class="${up ? 'up' : 'down'}">${up ? '+' : ''}${fmt(deltaAbs)}.I (${up ? '+' : ''}${fmt(chg, 2)}%)</span>`;
+  document.getElementById('assetMcap').textContent = `${fmtCompact(c.price * c.supply)}.I market cap`;
+  document.getElementById('assetStatBadge').innerHTML = c.delisted ? '<span style="color:#6e6690;">💀 DELISTED</span>' : c.rugged ? '<span style="color:#ff6e8e;">💀 RUGGED</span>' : '';
+  const favBtn = document.getElementById('assetFavBtn');
+  favBtn.textContent = isFavorite(c.key) ? '❤️' : '🤍';
+  favBtn.classList.toggle('active', isFavorite(c.key));
+  renderAssetChart();
+}
+
+function renderAssetChart() {
+  const c = state.coins.find(x => x.key === currentAssetCoin);
+  if (!c) return;
+  if (assetView === 'candles') {
+    document.getElementById('assetChartBox').style.width = '';
+    drawCandles(c.key, 'assetChartCanvas', 'assetChartScroll', true);
+    return;
+  }
+  let hist = state.history;
+  if (currentTimeframe === 'live') hist = hist.slice(-10);
+  else if (currentTimeframe === '1w') hist = hist.slice(-7);
+  else if (currentTimeframe === '1m') hist = hist.slice(-30);
+  const scrollEl = document.getElementById('assetChartScroll');
+  const inner = document.getElementById('assetChartBox');
+  const visibleW = scrollEl.getBoundingClientRect().width;
+  const neededW = Math.max(hist.length * 30 + 30, visibleW);
+  inner.style.width = neededW + 'px';
+  const ctx = document.getElementById('assetChartCanvas').getContext('2d');
+  if (assetChartInstance) assetChartInstance.destroy();
+  assetChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hist.map(d => 'D' + d.day),
+      datasets: [{
+        data: hist.map(d => d[c.key] !== undefined ? d[c.key] : null),
+        borderColor: c.color, backgroundColor: c.color + '22', borderWidth: 2, pointRadius: 0, tension: 0.35, spanGaps: true, fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0c0a14', borderColor: '#3a2f5c', borderWidth: 1 } },
+      scales: {
+        x: { ticks: { color: '#8d84a8', font: { size: 9 } }, grid: { color: '#241c3c' } },
+        y: { ticks: { color: '#8d84a8', font: { size: 10 } }, grid: { color: '#241c3c' } },
+      }
+    }
+  });
+  if (currentTimeframe === 'live') scrollEl.scrollLeft = scrollEl.scrollWidth;
+}
+
+function attachChat(key) {
+  chatMsgRef = db.ref('market/chat/' + key + '/messages');
+  chatPresenceRef = db.ref('market/chat/' + key + '/presence');
+  myPresenceRef = db.ref('market/chat/' + key + '/presence/' + chatGuestId);
+  myPresenceRef.set(true);
+  myPresenceRef.onDisconnect().remove();
+  chatPresenceRef.on('value', snap => {
+    const n = snap.numChildren ? snap.numChildren() : 0;
+    document.getElementById('chatPresence').textContent = n + ' here';
+  });
+  chatMsgRef.orderByChild('ts').limitToLast(50).on('value', snap => {
+    const msgs = [];
+    snap.forEach(ch => msgs.push(ch.val()));
+    const el = document.getElementById('chatMessages');
+    el.innerHTML = msgs.length ? msgs.map(m => `
+      <div class="chat-msg">
+        <div class="chat-msg-avatar">💬</div>
+        <div class="chat-msg-body"><div class="chat-msg-name">${escapeHtml(m.name || 'Guest')}</div>${escapeHtml(m.text || '')}</div>
+      </div>
+    `).join('') : '<div class="empty-note">no messages yet — say hi</div>';
+    el.scrollTop = el.scrollHeight;
+  });
+}
+function detachChat() {
+  if (chatMsgRef) chatMsgRef.off();
+  if (chatPresenceRef) chatPresenceRef.off();
+  if (myPresenceRef) myPresenceRef.remove();
+  chatMsgRef = chatPresenceRef = myPresenceRef = null;
+}
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || !currentAssetCoin) return;
+  const name = getChatNickname();
+  db.ref('market/chat/' + currentAssetCoin + '/messages').push({ name, text: text.slice(0, 200), ts: Date.now(), day: state.day || 1 });
+  input.value = '';
+}
+
+function renderPortfolio() {
+  const chipsEl = document.getElementById('traderChips');
+  if (!portfolioTrader && state.traders.length) portfolioTrader = state.traders[0].name;
+  chipsEl.innerHTML = state.traders.map(t => `<button class="trader-chip ${portfolioTrader===t.name?'active':''}" data-name="${t.name}">${t.name}</button>`).join('') || '<span class="empty-note">no traders yet</span>';
+  chipsEl.querySelectorAll('.trader-chip').forEach(btn => btn.onclick = () => { portfolioTrader = btn.dataset.name; renderAll(); });
+
+  const bodyEl = document.getElementById('portfolioBody');
+  const rows = getTraderRows();
+  const t = rows.find(r => r.name === portfolioTrader);
+  if (!t) { bodyEl.innerHTML = '<div class="empty-note">no traders yet — log a buy from the market tab</div>'; return; }
+
+  const totalVal = t.currentValue;
+  const allocSegs = t.posDetails.map(p => `<div class="alloc-seg" style="width:${totalVal>0?(p.value/totalVal*100):0}%;background:${p.color};"></div>`).join('');
+  bodyEl.innerHTML = `
+    <div class="balance-hero">
+      <div class="balance-num ${t.totalProfit>=0?'up':'down'}">${fmt(t.currentValue)}.I</div>
+      <div class="balance-label">in market — total P/L ${t.totalProfit>=0?'+':''}${fmt(t.totalProfit)}.I</div>
+    </div>
+    ${t.hasOpen ? `<div class="alloc-bar">${allocSegs}</div>` : ''}
+    <div id="holdingsList"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn full" id="pfBuyBtn">+ buy</button>
+      <button class="btn ghost full" id="pfSellAllBtn">sell everything</button>
+    </div>
+  `;
+  const holdingsEl = document.getElementById('holdingsList');
+  if (t.posDetails.length === 0) {
+    holdingsEl.innerHTML = '<div class="empty-note">no open positions — realized profit: ' + (t.realizedProfit>=0?'+':'') + fmt(t.realizedProfit) + '.I</div>';
+  } else {
+    holdingsEl.innerHTML = t.posDetails.map(p => `
+      <div class="holding-row">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:16px;">${p.icon}</span>
+          <div><div style="font-size:11.5px;font-weight:700;">${p.coinName}</div><div style="font-size:9.5px;color:#8d84a8;">${fmt(p.units,2)} units</div></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;font-weight:700;">${fmt(p.value)}.I</div>
+          <div style="font-size:10px;" class="${p.pl>=0?'up':'down'}">${p.pl>=0?'+':''}${fmt(p.pl)}.I</div>
+        </div>
+      </div>
+    `).join('') + `<div class="holding-row" style="border-top:1px dashed #2c2246;margin-top:4px;"><span style="font-size:10.5px;color:#8d84a8;">realized (all-time)</span><span style="font-size:11px;">${t.realizedProfit>=0?'+':''}${fmt(t.realizedProfit)}.I</span></div>`;
+  }
+  document.getElementById('pfBuyBtn').onclick = () => openSheet(null, t.name);
+  document.getElementById('pfSellAllBtn').onclick = () => {
+    openSheetMode('sell');
+    document.getElementById('sheetSellTrader').value = t.name;
+    renderSheetSellCoinOptions();
+    document.getElementById('sheetOverlay').classList.add('open');
+    document.getElementById('tradeSheet').classList.add('open');
+    renderSheetSellBody();
+  };
+}
+
+function renderLeaderboard() {
+  const rows = getTraderRows().sort((a,b) => b.totalProfit - a.totalProfit);
+  const medals = ['🥇','🥈','🥉'];
+  const el = document.getElementById('leaderboard');
+  if (rows.length === 0) { el.innerHTML = '<div class="empty-note">no traders yet</div>'; return; }
+  el.innerHTML = rows.map((t,i) => `
+    <div class="leader-row">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span>${medals[i]||'　'}</span>
+        <span style="font-weight:700;font-size:12px;">${t.name}</span>
+        <span style="font-size:9.5px;color:#8d84a8;">${t.hasOpen?'active':'flat'}</span>
+      </div>
+      <span style="font-weight:800;font-size:12.5px;" class="${t.totalProfit>=0?'up':'down'}">${t.totalProfit>=0?'+':''}${fmt(t.totalProfit)}.I</span>
+    </div>
+  `).join('');
+}
+
+function renderCoinManage() {
+  const el = document.getElementById('coinManage');
+  el.innerHTML = '';
+  if (state.coins.length === 0) { el.innerHTML = '<div class="empty-note">no coins listed</div>'; return; }
+  state.coins.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'coin-manage-row';
+    row.innerHTML = `<span>${c.icon} ${c.name} — ${fmt(c.price)}.I</span>`;
+    const btn = document.createElement('button');
+    btn.className = 'btn ghost small'; btn.textContent = 'remove';
+    btn.onclick = () => removeCoin(c.key);
+    row.appendChild(btn);
+    el.appendChild(row);
+  });
+}
+
+function renderLedger() {
+  const tbody = document.getElementById('ledgerBodyRows');
+  const recent = [...state.ledger].reverse().slice(0, 300);
+  tbody.innerHTML = recent.length === 0
+    ? '<tr><td colspan="7" style="color:#6e6690;">no transactions yet</td></tr>'
+    : recent.map(l => `
+      <tr>
+        <td>${l.day}</td>
+        <td style="color:${l.type==='buy'?'#6ec7ff':'#ff9a5a'}">${l.type}</td>
+        <td>${l.trader}</td>
+        <td>${l.coin}</td>
+        <td>${fmt(l.amount)}</td>
+        <td>${fmt(l.price)}</td>
+        <td style="color:${l.pl==null?'#6e6690':(l.pl>=0?'#4ee0a0':'#ff6e8e')}">${l.pl==null?'—':(l.pl>=0?'+':'')+fmt(l.pl)}</td>
+      </tr>
+    `).join('');
+  document.getElementById('feed').innerHTML = state.feed.map(f => `<div style="margin-bottom:4px;color:#a89bc9;">• ${f.text}</div>`).join('');
+}
+
+function postNews() {
+  const textEl = document.getElementById('newsText');
+  const text = textEl.value.trim();
+  if (!text) { showToast('write a headline first'); return; }
+  const coinKey = document.getElementById('newsCoin').value || null;
+  const impact = parseFloat(document.getElementById('newsImpact').value) || 0;
+  let coinName = null;
+  if (coinKey && impact) {
+    const coin = state.coins.find(c => c.key === coinKey);
+    if (coin) {
+      coin.price = Math.max(0.01, coin.price * (1 + impact / 100));
+      coin.dayHigh = Math.max(coin.dayHigh, coin.price);
+      coin.dayLow = Math.min(coin.dayLow, coin.price);
+      coin.ath = Math.max(coin.ath, coin.price);
+      coin.atl = Math.min(coin.atl, coin.price);
+      coinName = coin.name;
+    }
+  }
+  state.news = [{ id: nextId(state.news), day: state.day, text, coinKey, coinName, impact: coinName ? impact : 0 }, ...state.news].slice(0, 40);
+  state.feed = pushFeed(state.feed, `📰 ${text}${coinName ? ` (${coinName} ${impact>=0?'+':''}${impact}%)` : ''}`);
+  textEl.value = '';
+  document.getElementById('newsImpact').value = '';
+  document.getElementById('newsCoin').value = '';
+  save('news posted');
+}
+
+function renderRecentNews() {
+  const el = document.getElementById('newsRecent');
+  if (!el) return;
+  if (!state.news.length) { el.innerHTML = ''; return; }
+  el.innerHTML = state.news.slice(0, 4).map(n => `
+    <div style="font-size:10.5px;color:#a89bc9;padding:5px 0;border-bottom:1px solid #241c3c;">
+      <span class="muted">D${n.day}</span> ${n.text}${n.coinName ? ` <span class="${n.impact>=0?'up':'down'}">(${n.coinName} ${n.impact>=0?'+':''}${n.impact}%)</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderAll() {
+  document.getElementById('statusDot').className = 'status-dot ' + (state.online ? 'on' : 'off');
+  document.getElementById('statusText').textContent = `SERVER ${state.online ? 'ONLINE' : 'OFFLINE'}`;
+  document.getElementById('toggleOnlineBtn').textContent = state.online ? 'offline' : 'online';
+  document.getElementById('nextDayBtn').disabled = !state.online;
+  document.getElementById('subtitle').textContent = `Q&R² MARKET — DAY ${state.day} — UNIT: IRON INGOT (I)`;
+  document.getElementById('dayNum').textContent = state.day;
+
+  renderTicker();
+  renderCoinList();
+  renderPortfolio();
+  renderLeaderboard();
+  renderCoinManage();
+  renderLedger();
+  refreshSheetSelects();
+
+  document.getElementById('spreadInput').value = Math.round((1 - state.sellSpread) * 100);
+  document.getElementById('rateNetherite').value = state.exchangeRates.netherite;
+  document.getElementById('rateDiamond').value = state.exchangeRates.diamond;
+
+  if (currentAssetCoin) renderAssetPage();
+}
+
+function openSheet(coinKey, presetTrader) {
+  document.getElementById('sheetOverlay').classList.add('open');
+  document.getElementById('tradeSheet').classList.add('open');
+  openSheetMode('buy');
+  refreshSheetSelects();
+  if (coinKey) document.getElementById('sheetBuyCoin').value = coinKey;
+  if (presetTrader) document.getElementById('sheetBuyTrader').value = presetTrader;
+  updateBuyQuickAmounts();
+}
+function closeSheet() {
+  document.getElementById('sheetOverlay').classList.remove('open');
+  document.getElementById('tradeSheet').classList.remove('open');
+}
+function openSheetMode(mode) {
+  sheetMode = mode;
+  document.getElementById('modeBuyBtn').classList.toggle('active', mode==='buy');
+  document.getElementById('modeSellBtn').classList.toggle('active', mode==='sell');
+  document.getElementById('buyModeBody').style.display = mode==='buy' ? 'block' : 'none';
+  document.getElementById('sellModeBody').style.display = mode==='sell' ? 'block' : 'none';
+  document.getElementById('sheetTitle').textContent = mode==='buy' ? 'Buy' : 'Sell';
+  if (mode === 'sell') renderSheetSellBody();
+}
+function refreshSheetSelects() {
+  const buyTraderSel = document.getElementById('sheetBuyTrader');
+  const bp = buyTraderSel.value;
+  buyTraderSel.innerHTML = '<option value="">trader...</option>' + state.traders.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+  buyTraderSel.value = bp;
+  const buyCoinSel = document.getElementById('sheetBuyCoin');
+  const bc = buyCoinSel.value;
+  buyCoinSel.innerHTML = '<option value="">coin...</option>' + state.coins.map(c => `<option value="${c.key}">${c.icon} ${c.name}</option>`).join('');
+  buyCoinSel.value = bc;
+
+  const sellTraderSel = document.getElementById('sheetSellTrader');
+  const sp = sellTraderSel.value;
+  sellTraderSel.innerHTML = '<option value="">trader...</option>' + state.traders.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+  sellTraderSel.value = sp;
+  renderSheetSellCoinOptions();
+
+  const buyCoinObj = state.coins.find(c => c.key === buyCoinSel.value);
+  document.getElementById('minInvestNote').textContent = buyCoinObj ? `min invest: ${minInvest(buyCoinObj.price)}.I at ${fmt(buyCoinObj.price)}.I/unit` : '\u00A0';
+
+  const newsCoinSel = document.getElementById('newsCoin');
+  const nc = newsCoinSel.value;
+  newsCoinSel.innerHTML = '<option value="">no coin tag</option>' + state.coins.map(c => `<option value="${c.key}">${c.icon} ${c.name}</option>`).join('');
+  newsCoinSel.value = nc;
+  renderRecentNews();
+}
+function renderSheetSellCoinOptions() {
+  const sellTraderSel = document.getElementById('sheetSellTrader');
+  const sellCoinSel = document.getElementById('sheetSellCoin');
+  const chosenTrader = state.traders.find(t => t.name === sellTraderSel.value);
+  sellCoinSel.innerHTML = '<option value="">position...</option>' + (chosenTrader ? Object.keys(chosenTrader.positions).map(k => {
+    const c = state.coins.find(cc => cc.key === k);
+    return `<option value="${k}">${c ? c.icon+' '+c.name : k}</option>`;
+  }).join('') : '');
+}
+function renderSheetSellBody() {
+  const payoutBox = document.getElementById('payoutBox');
+  if (lastPayout) {
+    payoutBox.style.display = 'block';
+    payoutBox.style.marginTop = '12px';
+    payoutBox.innerHTML = `
+      <div style="background:#150f24;border-radius:10px;padding:10px;border:1px solid #2c2246;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">${lastPayout.trader} sold ${lastPayout.coin}</div>
+        <div style="font-size:12px;margin-bottom:6px;" class="${lastPayout.profit>=0?'up':'down'}">payout ${fmt(lastPayout.payout)}.I (${lastPayout.profit>=0?'+':''}${fmt(lastPayout.profit)}.I)</div>
+        <div style="font-size:10px;color:#8d84a8;">give: ${lastPayout.netherite} netherite + ${lastPayout.diamond} diamond + ${lastPayout.iron} iron</div>
+      </div>`;
+  } else { payoutBox.style.display = 'none'; }
+}
+function updateBuyQuickAmounts() {
+  const coinKey = document.getElementById('sheetBuyCoin').value;
+  const coin = state.coins.find(c => c.key === coinKey);
+  const el = document.getElementById('buyQuickAmounts');
+  if (!coin) { el.innerHTML = ''; return; }
+  const min = minInvest(coin.price);
+  const presets = [min, min*2, min*5, min*10];
+  el.innerHTML = presets.map(v => `<button class="quick-amt-btn" data-v="${v}">${v}.I</button>`).join('');
+  el.querySelectorAll('.quick-amt-btn').forEach(btn => btn.onclick = () => { document.getElementById('sheetBuyAmount').value = btn.dataset.v; });
+}
+
+document.getElementById('toggleOnlineBtn').onclick = toggleOnline;
+document.getElementById('nextDayBtn').onclick = advanceDay;
+document.getElementById('addCoinBtn').onclick = addCoin;
+document.getElementById('coinSearch').addEventListener('input', renderCoinList);
+document.getElementById('postNewsBtn').onclick = postNews;
+document.getElementById('saveSettingsBtn').onclick = saveSettings;
+document.getElementById('exportBtn').onclick = exportBackup;
+document.getElementById('exportCsvBtn').onclick = exportCsv;
+document.getElementById('resetBtn').onclick = resetMarket;
+document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+document.getElementById('importFile').addEventListener('change', (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; });
+
+document.getElementById('fabTrade').onclick = () => openSheet(null);
+document.getElementById('sheetClose').onclick = closeSheet;
+document.getElementById('sheetOverlay').onclick = closeSheet;
+document.getElementById('modeBuyBtn').onclick = () => openSheetMode('buy');
+document.getElementById('modeSellBtn').onclick = () => openSheetMode('sell');
+document.getElementById('sheetBuyBtn').onclick = doBuy;
+document.getElementById('sheetSellOneBtn').onclick = doSellPosition;
+document.getElementById('sheetSellAllBtn').onclick = doSellAll;
+document.getElementById('sheetBuyCoin').addEventListener('change', updateBuyQuickAmounts);
+document.getElementById('sheetSellTrader').addEventListener('change', renderSheetSellCoinOptions);
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.onclick = () => {
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === 'tab-'+activeTab));
+  };
+});
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (expandedCoin) renderAll(); }, 150);
+});
+
+document.getElementById('pinSubmitBtn').onclick = unlockOwner;
+document.getElementById('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockOwner(); });
+
+document.getElementById('assetBackBtn').onclick = closeAssetPage;
+document.getElementById('assetFavBtn').onclick = () => toggleFavorite(currentAssetCoin);
+document.getElementById('assetBuyBtn').onclick = () => { closeAssetPage(); openSheet(currentAssetCoin); };
+document.getElementById('chatSendBtn').onclick = sendChatMessage;
+document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+document.getElementById('assetViewToggle').onclick = () => {
+  assetView = assetView === 'line' ? 'candles' : 'line';
+  document.getElementById('assetViewToggle').textContent = assetView === 'line' ? '📊 candles' : '📈 line';
+  renderAssetChart();
+};
+document.querySelectorAll('#tfPills .tf-pill[data-tf]').forEach(p => {
+  p.onclick = () => {
+    currentTimeframe = p.dataset.tf;
+    document.querySelectorAll('#tfPills .tf-pill[data-tf]').forEach(x => x.classList.toggle('active', x === p));
+    renderAssetChart();
+  };
+});
+</script>
+</body>
+</html>
